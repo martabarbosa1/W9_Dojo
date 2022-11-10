@@ -4,17 +4,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st
 import numpy as np
-#import datetime
-import mysql.connector 
 import seaborn as sns
 import plotly.express as px
+
+import mysql.connector 
 
 from PIL import Image
 
 
+#Connect to queries from SQL and create for each a dataframe
+
 connection=mysql.connector.connect(user = 'toyscie', password = 'WILD4Rdata!', host = '51.68.18.102', port = '23456', database = 'toys_and_models')
 
-
+#Query Sales
 query_sales= '''WITH productline_quantity AS (
 SELECT productline, YEAR(orderDate) order_year, SUM(quantityordered) order_quantity, MONTH(orderDate) order_month
 FROM orders
@@ -33,7 +35,7 @@ FROM
 
 df_sales= pd.read_sql(query_sales, con=connection)
 
-
+#Query Finances_turnover
 query_finances_to='''select country, sum(priceeach*quantityordered) as turnover
 from orders o
 join orderdetails od on od.ordernumber=o.ordernumber
@@ -45,6 +47,7 @@ order by turnover desc'''
 df_finances_to = pd.read_sql(query_finances_to, con=connection)
 df_finances_to.head(7)
 
+#Query Finances_orders
 query_finances_o= '''select o.customernumber, sum(distinct od.quantityordered*od.priceEach) as Total_Amount_Ordered, sum(distinct p.amount) as Total_Amount_Paid, sum(distinct od.quantityordered*od.priceEach) - sum(distinct p.amount) as difference
 from orderdetails od
 join orders o on o.ordernumber=od.ordernumber
@@ -56,7 +59,7 @@ having difference > 0'''
 df_finances_o = pd.read_sql(query_finances_o, con=connection)
 df_finances_o.head(12)
 
-
+#Query Logistics
 query_logistics= '''select p.productname,p.productline, sum(od.quantityordered) as sumOrdered, p.quantityinstock from products p join orderdetails od on p.productcode=od.productCode
 group by p.productname
 order by sumOrdered desc
@@ -64,6 +67,7 @@ limit 5'''
 
 df_logistics=pd.read_sql(query_logistics, con=connection)
 
+#Query HR
 query_hr= '''WITH top_sellers AS (select e.employeeNumber, e.firstname, jobTitle, e.lastname, DATE_FORMAT(o.orderdate, "%c %Y") as DateOrd, year(o.orderdate) as YearOrd, month(o.orderdate) as month_,sum(od.quantityordered*od.priceeach) as highest_turnover,
 RANK() OVER (PARTITION BY DateOrd ORDER BY highest_turnover DESC) sell_rank from employees e
 join customers c on e.employeeNumber=c.salesRepEmployeeNumber
@@ -80,14 +84,13 @@ df_hr.head(53)
 df_hr = df_hr[df_hr['YearOrd'] == 2021]
 print(df_hr)
 
+
+#Streamilt code
+
+#Page configuration to wide
 st.set_page_config(page_title=None, page_icon=None, layout="wide", initial_sidebar_state="auto", menu_items=None)
 
-# st.markdown("<h1 style='text-align: center; color: Orange;'>Models and Toys</h1>", unsafe_allow_html=True)
-# st.markdown("<h1 style='text-align: center; color: Blue;'>Sales at a glance</h1>", unsafe_allow_html=True)
-
-# image1 = Image.open('./Image1.JPG')
-# st.image(image1)
-
+#Organize space in columns_1st line
 col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
@@ -112,6 +115,7 @@ with col5:
     st.image(image1s, width=300)
     
     
+#Organize space in columns_2nd line  
 col1, col2, col3 = st.columns(3)
 
 with col1:  
@@ -151,7 +155,7 @@ with col3:
     st.pyplot(fig3)
 
     
-    
+#Organize space in columns_3rd line
 col1, col2, col3 = st.columns(3)
 
 with col1:  
@@ -168,86 +172,4 @@ with col3:
     We should try to increase sales at least in planes + trains...''') 
     
 
-# with col2: 
-    # st.text_area('Text to analyze', '''
-    # The countries with less sales are Austria, Spain and USA. 
-    # ''')
-
-
-# with col3:
-#    # st.header("")
-#    # st.image("C:\Users\Marta\Documents\GitHub\W9_Dojo")
-#     image1 = Image.open('./Image1.JPG')
-#     st.image(image1)
-    
-# add_selectbox = st.sidebar.radio(
-#     "Topics",
-#     ("Sales", "Finance Turnover","Finance Orders", "Logistics", "HR"))
-
-
-# if add_selectbox=='Sales':
-
-
-
-
-
-# elif add_selectbox == 'Finance Turnover':
-#     st.title('''Finances''')
-#     st.subheader('''The turnover of the orders of the last two months by country:''')
-#     st.info('Information from last 2 months', icon="ℹ️")
-#     fig, ax = plt.subplots(figsize=(10, 4))
-#     ax.bar(df_finances_to["country"], df_finances_to["turnover"], color="grey")
-#     ax.set_title('The turnover of orders')
-#     ax.set_ylabel('Orders')
-#     ax.set_xlabel('Country')
-#     fig.autofmt_xdate()
-#     st.pyplot(fig)
-#     st.set_option('deprecation.showPyplotGlobalUse', False)
-# elif add_selectbox == 'Finance Orders':
-#     st.title('''Finances''')
-#     st.subheader('''Orders that have not yet been paid:''')
-#     st.write("  ")
-#     st.subheader('Total amount yet to be paid = 470 985,19')
-#     fig, ax = plt.subplots(figsize=(10, 4))
-#     ax = sns.barplot(x="customernumber", y="difference", data=df_finances_o, order=df_finances_o.sort_values('difference',ascending = False).customernumber, color='grey')
-#     ax.set_title('Amount orders not yet paid x customer')
-#     ax.set_xlabel("Customernumber")
-#     ax.set_ylabel("Difference")
-#     st.pyplot(fig)  
-# elif add_selectbox == 'Logistics':
-#     st.title('''Logistics''')
-#     st.subheader('''The stock of the 5 most ordered products:''')
-#     fig, ax1 = plt.subplots(figsize=(10, 4))
-#     ax1.bar(df_logistics["productname"], df_logistics["quantityinstock"], color='grey')
-#     ax1.set_title('# stock x product')
-#     ax1.set_ylabel('Qty in stock (nº)')
-#     ax1.set_xlabel('Product')
-#     fig.autofmt_xdate()
-#     ax2 = ax1.twinx()
-#     ax2.set_ylabel('# orders')
-#     ax2.plot(df_logistics["productname"], df_logistics["sumOrdered"], color = 'blue')
-#     ax2.set_yticks(range(0, 1600, 500))
-#     st.pyplot(fig)
-#     st.set_option('deprecation.showPyplotGlobalUse', False)
-#     st.dataframe(df_logistics)
-# else:
-#     st.title('''HR''')
-#     st.subheader('''Each month, the 2 sellers with the highest turnover:''')
-#     st.info('Information related to the year 2021', icon="ℹ️")
-#     df_hr = pd.read_sql(query_hr, con=connection)
-#     df_hr = df_hr[df_hr['YearOrd'] == 2021]
-#     df_hrv2 = df_hr.loc[:, ["month_", "firstname", "lastname", "sell_rank", "highest_turnover","DateOrd"]]
-#     df_hrv3 = df_hrv2.sort_values(by=["month_", "sell_rank"], ascending=True)
-    
-#     fig, axes = plt.subplots(figsize=(10,4))
-#     colors=['grey', 'black']
-#     sns.barplot(data=df_hrv3, x="DateOrd", y="highest_turnover", hue="sell_rank", ci=None, palette=colors).set(title='Top 2 sellers with the highest   turnover')
-#     axes.set_xlabel("Month")
-#     axes.set_ylabel("Turnover")
-#     axes.legend(title="Sell Rank: ")
-#     st.pyplot(fig)
-#     df_hr = pd.read_sql(query_hr, con=connection)
-#     df_hr = df_hr[df_hr['YearOrd'] == 2021]
-#     df_hrv2 = df_hr.loc[:, ["month_", "firstname", "lastname", "sell_rank", "highest_turnover","DateOrd"]]
-#     df_hrv3 = df_hrv2.sort_values(by=["month_", "sell_rank"], ascending=True)
-#     st.dataframe (df_hrv3)
+#End
